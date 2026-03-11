@@ -1,0 +1,32 @@
+ps aux | grep node
+ number of processes or servers running
+kill -9 process_id
+ terminates the process
+tmux ls
+tmux 
+tmux attach -t session_number
+to detach from tmux session: press ctrl+b then d
+ps -f -p process_id to know the parent process process_id
+https://tex-yacht-pacific-conferencing.trycloudflare.com
+pm2 start "server -s dist -l 3000" --name echo-ai
+pm2 start
+pm2 restart echo-ai
+pm2 save 
+pm2 list
+cloudflared tunnel login
+cloudflared tunnel create phone-server
+pm2 start "cloudflared tunnel run phone-server" --name public-url
+
+
+nano ~/.cloudflared/config.yml
+cloudflared tunnel route dns phone-server ai.arhavr.xyz
+
+tunnel: phone-server
+credentials-file: /data/data/com.termux/files/home/.cloudflared/abc123.json
+
+ingress:
+  - hostname: echo-ai.arhavr.xyz
+    service: http://localhost:3000
+  - service: http_status:404
+
+pm2 start "cloudflared tunnel run phone-server" --name public-url1
