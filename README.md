@@ -299,6 +299,6 @@ Possible improvements include:
 
 ---
 
-# License
+## Note
 
-This project is released under the **MIT License**.
+This project was developed as a personal learning project and is shared for educational purposes.
