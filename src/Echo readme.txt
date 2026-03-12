@@ -1,4 +1,3 @@
-API KEY : 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
 Llama3 8B llm model is used
 
 Llama 3 → The 3rd generation of Meta’s Llama AI models.
