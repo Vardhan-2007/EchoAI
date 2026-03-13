@@ -1552,14 +1552,29 @@ function FocusMode({ tasks, focusSess, setFocusSess }) {
     { label: "Long Break", mins: 15, color: "var(--info)" },
   ];
   const [modeIdx, setModeIdx] = useState(0);
-  const [secs, setSecs] = useState(25 * 60);
+  const [secsMap, setSecsMap] = useState({
+    0: 25 * 60,
+    1: 5 * 60,
+    2: 15 * 60,
+  });
   const [running, setRunning] = useState(false);
   const [sessions, setSessions] = useState(0);
   const [selTask, setSelTask] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editInput, setEditInput] = useState(""); // "mm:ss" string while editing
   const timerRef = useRef(null);
+  const inputRef = useRef(null);
 
-  const totalSecs = MODES[modeIdx].mins * 60;
-  const pct = ((totalSecs - secs) / totalSecs) * 100;
+  const secs = secsMap[modeIdx];
+  const setSecs = (val) =>
+    setSecsMap(prev => ({
+      ...prev,
+      [modeIdx]: typeof val === "function" ? val(prev[modeIdx]) : val,
+    }));
+
+  const totalSecs = secsMap[modeIdx]; // use current secs as total when user customizes
+  const [totalMap, setTotalMap] = useState({ 0: 25 * 60, 1: 5 * 60, 2: 15 * 60 });
+  const pct = ((totalMap[modeIdx] - secs) / totalMap[modeIdx]) * 100;
   const R = 104; const C = 2 * Math.PI * R;
 
   useEffect(() => {
@@ -1579,7 +1594,7 @@ function FocusMode({ tasks, focusSess, setFocusSess }) {
             if (modeIdx === 0) {
               setSessions(c => c + 1);
               const task = tasks.find(t => t.id === selTask);
-              setFocusSess(f => [...f, { id: uid(), date: today(), mins: MODES[0].mins, task: task?.title || "Focus Session" }]);
+              setFocusSess(f => [...f, { id: uid(), date: today(), mins: Math.floor(totalMap[modeIdx] / 60), task: task?.title || "Focus Session" }]);
             }
             return 0;
           }
@@ -1590,13 +1605,65 @@ function FocusMode({ tasks, focusSess, setFocusSess }) {
     return () => clearInterval(timerRef.current);
   }, [running, modeIdx]); // eslint-disable-line
 
-  const switchMode = i => { setModeIdx(i); setSecs(MODES[i].mins * 60); setRunning(false); clearInterval(timerRef.current); };
-  const reset = () => { setSecs(MODES[modeIdx].mins * 60); setRunning(false); clearInterval(timerRef.current); };
+  // Focus input when edit mode opens
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
 
-  const todayMins = useMemo(() => focusSess.filter(s => s.date === today()).reduce((a, b) => a + (b?.mins || 0), 0), [focusSess]);
-  const totalMins = useMemo(() => focusSess.reduce((a, b) => a + (b?.mins || 0), 0), [focusSess]);
+  const switchMode = (i) => {
+    setRunning(false);
+    clearInterval(timerRef.current);
+    setModeIdx(i);
+    setEditing(false);
+  };
+
+  const reset = () => {
+    setSecsMap(prev => ({ ...prev, [modeIdx]: totalMap[modeIdx] }));
+    setRunning(false);
+    clearInterval(timerRef.current);
+  };
+
+  // Open edit mode — show current time as mm:ss
+  const openEdit = () => {
+    if (running) return; // don't allow edit while running
+    const m = String(Math.floor(secs / 60)).padStart(2, "0");
+    const s = String(secs % 60).padStart(2, "0");
+    setEditInput(`${m}:${s}`);
+    setEditing(true);
+  };
+
+  // Format input as user types — only allow digits, auto-insert colon
+  const handleEditChange = (e) => {
+    let raw = e.target.value.replace(/\D/g, "").slice(0, 4); // digits only, max 4
+    if (raw.length >= 3) raw = raw.slice(0, 2) + ":" + raw.slice(2);
+    setEditInput(raw);
+  };
+
+  // Commit the edited time
+  const commitEdit = () => {
+    const parts = editInput.split(":");
+    const mins = Math.min(parseInt(parts[0] || "0", 10), 99);
+    const seconds = Math.min(parseInt(parts[1] || "0", 10), 59);
+    const total = mins * 60 + seconds;
+    if (total > 0) {
+      setSecsMap(prev => ({ ...prev, [modeIdx]: total }));
+      setTotalMap(prev => ({ ...prev, [modeIdx]: total }));
+    }
+    setEditing(false);
+  };
+
+  const handleEditKey = (e) => {
+    if (e.key === "Enter") commitEdit();
+    if (e.key === "Escape") setEditing(false);
+  };
+
   const selTaskObj = tasks.find(t => t.id === selTask);
   const selQ = selTaskObj?.quad ? QUADS[selTaskObj.quad] : null;
+  const todayMins = useMemo(() => focusSess.filter(s => s.date === today()).reduce((a, b) => a + (b?.mins || 0), 0), [focusSess]);
+  const totalMins = useMemo(() => focusSess.reduce((a, b) => a + (b?.mins || 0), 0), [focusSess]);
 
   return (
     <div className="anim" style={{ display: "flex", flexDirection: "column", gap: 22, alignItems: "center", maxWidth: 460, margin: "0 auto" }}>
@@ -1619,8 +1686,48 @@ function FocusMode({ tasks, focusSess, setFocusSess }) {
             strokeDasharray={C} strokeDashoffset={C * (1 - pct / 100)} strokeLinecap="round"
             style={{ transition: "stroke-dashoffset 1s linear", filter: `drop-shadow(0 0 8px ${MODES[modeIdx].color})` }} />
         </svg>
+
         <div style={{ textAlign: "center", zIndex: 1 }}>
-          <div className="f-mono f-display" style={{ fontSize: 42, fontWeight: 700, color: MODES[modeIdx].color, letterSpacing: -1 }}>{fmtTime(secs)}</div>
+          {editing ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
+              <input
+                ref={inputRef}
+                value={editInput}
+                onChange={handleEditChange}
+                onKeyDown={handleEditKey}
+                onBlur={commitEdit}
+                className="f-mono f-display"
+                style={{
+                  fontSize: 42, fontWeight: 700, color: MODES[modeIdx].color,
+                  letterSpacing: -1, background: "transparent", border: "none",
+                  borderBottom: `2px solid ${MODES[modeIdx].color}`,
+                  width: 140, textAlign: "center", outline: "none",
+                }}
+                placeholder="mm:ss"
+              />
+              <div style={{ fontSize: 10, color: "var(--t3)" }}>Enter to confirm · Esc to cancel</div>
+            </div>
+          ) : (
+            <div
+              onClick={openEdit}
+              title={running ? "" : "Click to edit time"}
+              style={{
+                cursor: running ? "default" : "pointer",
+                borderRadius: 10,
+                padding: "4px 8px",
+                transition: "background 0.15s",
+              }}
+              onMouseEnter={e => { if (!running) e.currentTarget.style.background = "var(--s3)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <div className="f-mono f-display" style={{ fontSize: 42, fontWeight: 700, color: MODES[modeIdx].color, letterSpacing: -1 }}>
+                {fmtTime(secs)}
+              </div>
+              {!running && (
+                <div style={{ fontSize: 10, color: "var(--t3)", marginTop: 2 }}>✏️ tap to edit</div>
+              )}
+            </div>
+          )}
           <div style={{ fontSize: 12, color: "var(--t2)", marginTop: 4 }}>{MODES[modeIdx].label}</div>
           {sessions > 0 && <div style={{ fontSize: 11, color: "var(--warn)", marginTop: 4 }}>🍅 {sessions} session{sessions !== 1 ? "s" : ""}</div>}
         </div>
