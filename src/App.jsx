@@ -9,7 +9,13 @@ const STYLES = `
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Figtree:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body, #root { width: 100%; overflow-x: hidden; }
+
+/* FIX: prevent horizontal scroll on all screen sizes */
+html, body, #root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
 html { scroll-behavior: smooth; }
 body {
   font-family: 'Figtree', -apple-system, sans-serif;
@@ -90,10 +96,7 @@ textarea.inp { resize: vertical; }
   gap: 6px; line-height: 1; letter-spacing: -.01em; white-space: nowrap;
 }
 .btn:focus-visible { outline: 2px solid var(--ac); outline-offset: 2px; }
-.btn-p {
-  background: var(--ac); color: #fff;
-  box-shadow: var(--shadow-ac);
-}
+.btn-p { background: var(--ac); color: #fff; box-shadow: var(--shadow-ac); }
 .btn-p:hover:not(:disabled)  { background: #6d4ee8; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(124,92,252,.4); }
 .btn-p:active:not(:disabled) { transform: translateY(0); }
 .btn-p:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -108,28 +111,17 @@ textarea.inp { resize: vertical; }
 
 /* ── Sidebar ── */
 .echo-sidebar {
-  background: linear-gradient(
-    180deg,
-    #12121a 0%,
-    #0e0e14 60%,
-    #0a0a10 100%
-  );
+  background: linear-gradient(180deg, #12121a 0%, #0e0e14 60%, #0a0a10 100%);
   border-right: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(20px);
 }
-  .echo-sidebar::after {
+.echo-sidebar::after {
   content: "";
-  position: absolute;
-  right: 0;
-  top: 0;
-  width: 1px;
-  height: 100%;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(124,92,252,.35),
-    transparent
-  );
+  position: absolute; right: 0; top: 0;
+  width: 1px; height: 100%;
+  background: linear-gradient(to bottom, transparent, rgba(124,92,252,.35), transparent);
 }
+
 /* ── Navigation ── */
 .nav-item {
   display: flex; align-items: center; gap: 9px; padding: 8px 11px;
@@ -137,13 +129,9 @@ textarea.inp { resize: vertical; }
   color: #a3a3b5; font-size: 13px; font-weight: 500; border: none;
   background: none; width: 100%; font-family: 'Figtree', sans-serif; text-align: left;
 }
-.nav-item:hover {
-  background: rgba(255,255,255,0.05);
-  color: #ffffff;
-}
+.nav-item:hover { background: rgba(255,255,255,0.05); color: #ffffff; }
 .nav-item.on {
-  background: rgba(124,92,252,0.18);
-  color: #c4b5fd;
+  background: rgba(124,92,252,0.18); color: #c4b5fd;
   border: 1px solid rgba(124,92,252,.3);
   box-shadow: 0 0 12px rgba(124,92,252,.25);
 }
@@ -176,9 +164,12 @@ textarea.inp { resize: vertical; }
   overflow: hidden; transition: box-shadow .22s, border-color .22s;
 }
 .qcell:hover { box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+.qcell.drag-over { outline: 2px dashed var(--ac); background: rgba(108,99,255,0.08); }
+
 .tag {
   padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .07em; display: inline-flex; align-items: center; gap: 4px;
+  text-transform: uppercase; letter-spacing: .07em;
+  display: inline-flex; align-items: center; gap: 4px;
 }
 .task-pill {
   display: flex; align-items: center; gap: 8px; padding: 8px 11px;
@@ -206,15 +197,15 @@ textarea.inp { resize: vertical; }
 .scroll-thin { scrollbar-width: thin; scrollbar-color: var(--s5) transparent; }
 
 /* ── Animations ── */
-@keyframes fadeUp   { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-@keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
-@keyframes pop      { 0% { transform:scale(.93); opacity:0; } 55% { transform:scale(1.02); } 100% { transform:scale(1); opacity:1; } }
-@keyframes slideIn  { from { transform:translateX(-6px); opacity:0; } to { transform:translateX(0); opacity:1; } }
-@keyframes spin     { to { transform:rotate(360deg); } }
-@keyframes pulse    { 0%,100% { opacity:1; } 50% { opacity:.3; } }
-@keyframes glow     { 0%,100% { box-shadow:0 0 10px var(--ac); } 50% { box-shadow:0 0 22px var(--ac2), 0 0 40px rgba(124,92,252,.2); } }
-@keyframes shimmer  { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
-@keyframes blink    { 0%,100%{opacity:1;} 50%{opacity:0;} }
+@keyframes fadeUp  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+@keyframes pop     { 0% { transform:scale(.93); opacity:0; } 55% { transform:scale(1.02); } 100% { transform:scale(1); opacity:1; } }
+@keyframes slideIn { from { transform:translateX(-6px); opacity:0; } to { transform:translateX(0); opacity:1; } }
+@keyframes spin    { to { transform:rotate(360deg); } }
+@keyframes pulse   { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+@keyframes glow    { 0%,100% { box-shadow:0 0 10px var(--ac); } 50% { box-shadow:0 0 22px var(--ac2), 0 0 40px rgba(124,92,252,.2); } }
+@keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }
+@keyframes blink   { 0%,100%{opacity:1;} 50%{opacity:0;} }
 
 .anim     { animation: fadeUp .3s ease both; }
 .anim-pop { animation: pop .32s cubic-bezier(.34,1.56,.64,1) both; }
@@ -232,40 +223,52 @@ textarea.inp { resize: vertical; }
 
 /* ── Skeleton ── */
 .skel {
-  background: var(--s3); border-radius: var(--radius-md);
-  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-md);
   background: linear-gradient(90deg, var(--s3) 25%, var(--s4) 50%, var(--s3) 75%);
   background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }
 
 /* ── Divider ── */
 .divider { height:1px; background: var(--b1); width:100%; }
 
 /* ── Dot status ── */
-.status-dot {
-  display: inline-block; width: 6px; height: 6px;
-  border-radius: 50%; flex-shrink: 0;
+.status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+/* ══════════════════════════════════════════
+   MOBILE RESPONSIVE OVERRIDES (max 767px)
+══════════════════════════════════════════ */
+@media (max-width: 767px) {
+
+  /* Cards: reduce padding so content fits */
+  .card    { border-radius: var(--radius-lg); padding: 14px !important; }
+  .card-sm { border-radius: var(--radius-md); }
+
+  /* Quadrant grid: stack to 1 column on small phones */
+  .qcell { padding: 12px; }
+
+  /* Buttons: slightly larger touch targets */
+  .btn { padding: 9px 14px; font-size: 13px; }
+  .btn-sm { padding: 7px 11px; }
+
+  /* Inputs: prevent iOS zoom on focus (font-size must be ≥ 16px) */
+  .inp { font-size: 16px !important; }
+
+  /* Chat bubbles: wider on mobile */
+  .bubble-u { max-width: 92%; }
+  .bubble-a { max-width: 96%; }
+
+  /* Ensure no element bleeds past viewport */
+  * { max-width: 100%; }
+  img, svg, video { max-width: 100%; }
 }
-  .qcell.drag-over {
-  outline: 2px dashed var(--ac);
-  background: rgba(108,99,255,0.08);
-}
-  .echo-sidebar::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 0;
-  width: 1px;
-  height: 100%;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(124,92,252,.3),
-    transparent
-  );
-}
-  .echo-sidebar {
-  backdrop-filter: blur(20px);
+
+/* ══════════════════════════════════════════
+   VERY SMALL PHONES (max 380px)
+══════════════════════════════════════════ */
+@media (max-width: 380px) {
+  .btn { padding: 8px 10px; font-size: 12px; gap: 4px; }
+  .nav-item { font-size: 12px; padding: 8px 9px; gap: 7px; }
 }
 `;
 
@@ -521,11 +524,17 @@ function Sidebar({ view, setView, open, setOpen, tasks }) {
     { id: "review", label: "Weekly Review", icon: I.review },
     { id: "ai", label: "Echo AI", icon: I.ai },
   ];
+
+  // FIX: if view is ever empty/null, fall back to "dash" so Dashboard is always highlighted on load
+  const activeView = view || "dash";
+
   return (
     <>
       {open && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", zIndex: 40 }}
-          onClick={() => setOpen(false)} />
+        <div
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.65)", zIndex: 40 }}
+          onClick={() => setOpen(false)}
+        />
       )}
       <aside className="echo-sidebar" style={{
         width: 220, background: "var(--s1)", borderRight: "1px solid var(--b1)",
@@ -540,7 +549,6 @@ function Sidebar({ view, setView, open, setOpen, tasks }) {
             <div style={{
               width: 32, height: 32, borderRadius: 10,
               background: "linear-gradient(135deg, var(--ac), var(--ac2))",
-              boxShadow: "0 0 20px rgba(124,92,252,.35)",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 15, boxShadow: "0 4px 12px var(--acg)", flexShrink: 0,
             }}>◈</div>
@@ -554,9 +562,13 @@ function Sidebar({ view, setView, open, setOpen, tasks }) {
         {/* Nav */}
         <nav style={{ flex: 1, display: "flex", flexDirection: "column", gap: 2 }}>
           {nav.map(n => (
-            <button key={n.id} className={`nav-item${view === n.id ? " on" : ""}`}
-              onClick={() => { setView(n.id); setOpen(false); }}>
-              <span style={{ opacity: view === n.id ? 1 : .75, display: "flex" }}>{n.icon}</span>
+            <button
+              key={n.id}
+              // FIX: use activeView instead of view so "dash" is highlighted by default
+              className={`nav-item${activeView === n.id ? " on" : ""}`}
+              onClick={() => { setView(n.id); setOpen(false); }}
+            >
+              <span style={{ opacity: activeView === n.id ? 1 : .75, display: "flex" }}>{n.icon}</span>
               {n.label}
               {n.badge ? <span className="nav-badge">{n.badge}</span> : null}
             </button>
@@ -1450,91 +1462,329 @@ No markdown. No explanation.`
 // ═══════════════════════════════════════════════════════════════════════════════
 // ─── HABIT TRACKER ──────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
-function HabitTracker({ habits, setHabits }) {
+// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
+const STORAGE_KEY = "habittracker_habits";
+const LAST_OPEN_KEY = "habittracker_last_open";
+const STORAGE_VERSION_KEY = "habittracker_version";
+const CURRENT_VERSION = "2"; // bump this to force-reset streaks on next load
+
+const dateStr = (d = new Date()) => d.toISOString().split("T")[0];
+
+const yesterdayStr = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return dateStr(d);
+};
+
+// ─── LocalStorage helpers ──────────────────────────────────────────────────────
+const loadFromStorage = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveToStorage = (habits) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
+  } catch {
+    // storage quota exceeded or private mode — fail silently
+  }
+};
+
+// ─── Force-reset streaks if version mismatch ───────────────────────────────────
+// Any habits loaded from old localStorage will have their streaks wiped to 0.
+// After reset, saves the new version so this only runs once.
+const resetStreaksIfVersionMismatch = (habits) => {
+  const storedVersion = localStorage.getItem(STORAGE_VERSION_KEY);
+  if (storedVersion === CURRENT_VERSION) return habits; // already up to date
+
+  // Version mismatch → wipe all streaks to 0
+  localStorage.setItem(STORAGE_VERSION_KEY, CURRENT_VERSION);
+  const reset = habits.map(h => ({
+    ...h,
+    streak: 0,
+    days: Array(7).fill(false),
+  }));
+  saveToStorage(reset);
+  return reset;
+};
+
+// ─── Daily streak reset logic ──────────────────────────────────────────────────
+// Runs on every mount. If user missed yesterday → reset that habit's streak to 0.
+const applyStreakReset = (habits) => {
+  const lastOpen = localStorage.getItem(LAST_OPEN_KEY);
+  const today = dateStr();
+  const yesterday = yesterdayStr();
+
+  localStorage.setItem(LAST_OPEN_KEY, today);
+
+  // Same-day refresh — don't touch streaks
+  if (lastOpen === today) return habits;
+
+  // First ever open after version reset — streaks already 0, just return
+  if (!lastOpen) return habits;
+
+  const missedYesterday = lastOpen !== yesterday;
+  const yesterdayIdx = new Date(yesterday).getDay();
+
+  return habits.map(h => {
+    const days = Array.isArray(h.days) && h.days.length === 7
+      ? h.days.map(Boolean)
+      : Array(7).fill(false);
+
+    // Reset if: opened after a 2+ day gap, OR yesterday's box was not checked
+    const shouldReset = missedYesterday || !days[yesterdayIdx];
+
+    return {
+      ...h,
+      days,
+      streak: shouldReset ? 0 : (typeof h.streak === "number" && h.streak >= 0 ? h.streak : 0),
+    };
+  });
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
+function HabitTracker({ habits: propHabits, setHabits: setPropHabits }) {
   const [newName, setNewName] = useState("");
   const [newEmoji, setNewEmoji] = useState("⭐");
-  const todayIdx = new Date().getDay();
 
+  const todayIdx = useMemo(() => new Date().getDay(), []);
+
+  // Initialize: load → version check (wipes old streaks) → daily reset
+  const [habits, setHabitsLocal] = useState(() => {
+    const stored = loadFromStorage();
+    const base = stored ?? propHabits ?? [];
+    const versionChecked = resetStreaksIfVersionMismatch(base); // ← wipes old streaks once
+    return applyStreakReset(versionChecked);                    // ← then apply daily logic
+  });
+
+  // Single setHabits wrapper — keeps localStorage + parent in sync
+  const setHabits = useCallback((updater) => {
+    setHabitsLocal(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      saveToStorage(next);
+      setPropHabits?.(next);
+      return next;
+    });
+  }, [setPropHabits]);
+
+  // Normalize every habit — always 7 booleans, streak always >= 0
+  const safeHabits = useMemo(() =>
+    habits.map(h => ({
+      ...h,
+      streak: typeof h.streak === "number" && h.streak > 0 ? h.streak : 0,
+      days: Array.isArray(h.days) && h.days.length === 7
+        ? h.days.map(Boolean)
+        : Array(7).fill(false),
+    })), [habits]);
+
+  // ── Add new habit ─────────────────────────────────────────────────────────
   const add = useCallback(() => {
     if (!newName.trim()) return;
-    setHabits(h => [...h, { id: uid(), name: newName.trim(), emoji: newEmoji || "⭐", streak: 0, days: Array(7).fill(false) }]);
-    setNewName(""); setNewEmoji("⭐");
+    setHabits(h => [
+      ...h,
+      {
+        id: uid(),
+        name: newName.trim(),
+        emoji: newEmoji || "⭐",
+        streak: 0,
+        days: Array(7).fill(false),
+        createdAt: dateStr(),
+      },
+    ]);
+    setNewName("");
+    setNewEmoji("⭐");
   }, [newName, newEmoji, setHabits]);
 
+  // ── Toggle today only ─────────────────────────────────────────────────────
   const toggleDay = useCallback((hid, di) => {
+    if (di !== todayIdx) return;
+
     setHabits(h => h.map(x => {
       if (x.id !== hid) return x;
-      const days = [...x.days]; days[di] = !days[di];
-      const streak = di === todayIdx ? (days[di] ? x.streak + 1 : Math.max(0, x.streak - 1)) : x.streak;
+
+      const days = Array.isArray(x.days) && x.days.length === 7
+        ? [...x.days]
+        : Array(7).fill(false);
+
+      days[di] = !days[di];
+
+      const currentStreak = typeof x.streak === "number" && x.streak >= 0 ? x.streak : 0;
+      const streak = days[di]
+        ? currentStreak + 1
+        : Math.max(0, currentStreak - 1);
+
       return { ...x, days, streak };
     }));
   }, [todayIdx, setHabits]);
 
-  const del = useCallback(id => setHabits(h => h.filter(x => x.id !== id)), [setHabits]);
+  // ── Delete habit ──────────────────────────────────────────────────────────
+  const del = useCallback(
+    id => setHabits(h => h.filter(x => x.id !== id)),
+    [setHabits]
+  );
 
   const weeklyData = useMemo(() =>
-    DAYS.map((d, i) => ({ day: d, done: habits.filter(h => h?.days?.[i]).length })), [habits]);
+    DAYS.map((d, i) => ({
+      day: d,
+      done: safeHabits.filter(h => h.days[i] === true).length,
+    })), [safeHabits]);
 
   return (
     <div className="anim" style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <SectionHeader title="Habit Tracker" subtitle={new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} />
+      <SectionHeader
+        title="Habit Tracker"
+        subtitle={new Date().toLocaleDateString("en-US", {
+          weekday: "long", month: "long", day: "numeric",
+        })}
+      />
 
+      {/* Add habit row */}
       <div style={{ display: "flex", gap: 8 }}>
-        <input className="inp" placeholder="New habit name…" value={newName}
-          onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === "Enter" && add()} style={{ flex: 1 }} />
-        <input className="inp" placeholder="Emoji" value={newEmoji}
-          onChange={e => setNewEmoji(e.target.value)} style={{ width: 68 }} />
-        <button className="btn btn-p" onClick={add} disabled={!newName.trim()}>{I.plus}</button>
+        <input
+          className="inp"
+          placeholder="New habit name…"
+          value={newName}
+          onChange={e => setNewName(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && add()}
+          style={{ flex: 1 }}
+        />
+        <input
+          className="inp"
+          placeholder="Emoji"
+          value={newEmoji}
+          onChange={e => setNewEmoji(e.target.value)}
+          style={{ width: 68 }}
+        />
+        <button className="btn btn-p" onClick={add} disabled={!newName.trim()}>
+          {I.plus}
+        </button>
       </div>
 
-      {habits.length > 0 && (
+      {/* Weekly bar chart */}
+      {safeHabits.length > 0 && (
         <div className="card" style={{ padding: 20 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 12, color: "var(--t2)" }}>Weekly Completion</div>
+          <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 12, color: "var(--t2)" }}>
+            Weekly Completion
+          </div>
           <ResponsiveContainer width="100%" height={96}>
             <BarChart data={weeklyData} barSize={16}>
-              <XAxis dataKey="day" tick={{ fill: "var(--t3)", fontSize: 11 }} axisLine={false} tickLine={false} />
+              <XAxis
+                dataKey="day"
+                tick={{ fill: "var(--t3)", fontSize: 11 }}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis
+                domain={[0, Math.max(safeHabits.length, 1)]}
+                hide={true}
+              />
               <Tooltip contentStyle={ChartTooltipStyle} cursor={{ fill: "rgba(124,92,252,.05)" }} />
               <Bar dataKey="done" radius={[4, 4, 0, 0]}>
-                {weeklyData.map((_, i) => <Cell key={i} fill={i === todayIdx ? "var(--ac)" : "var(--s5)"} />)}
+                {weeklyData.map((_, i) => (
+                  <Cell key={i} fill={i === todayIdx ? "var(--ac)" : "var(--s5)"} />
+                ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {habits.length === 0 && <EmptyState icon="🌱" title="No habits yet" body="Add your first habit above to start building your streak." />}
+      {safeHabits.length === 0 && (
+        <EmptyState icon="🌱" title="No habits yet" body="Add your first habit above to start building your streak." />
+      )}
 
-      {habits.map(h => (
+      {/* Habit cards */}
+      {safeHabits.map(h => (
         <div key={h.id} className="card-sm" style={{ padding: "15px 18px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 13 }}>
             <span style={{ fontSize: 22 }}>{h.emoji || "⭐"}</span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 600 }}>{h.name}</div>
-              <div style={{ fontSize: 11.5, color: "var(--warn)", marginTop: 2 }}>🔥 {h.streak} day streak</div>
+
+              {/* Show streak only when > 0, otherwise nudge the user */}
+              {h.streak > 0 ? (
+                <div style={{ fontSize: 11.5, color: "var(--warn)", marginTop: 2 }}>
+                  🔥 {h.streak} day streak
+                </div>
+              ) : (
+                <div style={{ fontSize: 11.5, color: "var(--t3)", marginTop: 2 }}>
+                  Start your streak today!
+                </div>
+              )}
             </div>
+
             <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
               <div className="pbar" style={{ width: 64 }}>
-                <div className="pfill" style={{ width: `${Math.min(100, (h.streak / 30) * 100)}%`, background: "var(--warn)" }} />
+                <div
+                  className="pfill"
+                  style={{
+                    width: `${Math.min(100, (h.streak / 30) * 100)}%`,
+                    background: "var(--warn)",
+                  }}
+                />
               </div>
-              <button className="btn btn-ghost btn-sm" style={{ color: "var(--err)" }} onClick={() => del(h.id)}>{I.trash}</button>
+              <button
+                className="btn btn-ghost btn-sm"
+                style={{ color: "var(--err)" }}
+                onClick={() => del(h.id)}
+              >
+                {I.trash}
+              </button>
             </div>
           </div>
+
+          {/* Day buttons */}
           <div style={{ display: "flex", gap: 5 }}>
-            {DAYS.map((d, i) => (
-              <div key={d} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: 9, color: i === todayIdx ? "var(--ac2)" : "var(--t3)", fontWeight: i === todayIdx ? 700 : 400 }}>{d}</span>
-                <button style={{
-                  width: 25, height: 25, borderRadius: 7,
-                  background: h.days?.[i] ? "var(--ok)" : "transparent",
-                  border: `1.5px solid ${h.days?.[i] ? "var(--ok)" : i === todayIdx ? "var(--ac)" : "var(--b1)"}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  cursor: "pointer", outline: i === todayIdx ? "2px solid rgba(124,92,252,.2)" : "none",
-                  outlineOffset: 2, transition: "var(--transition)", color: "#fff",
-                }} onClick={() => toggleDay(h.id, i)}>
-                  {h.days?.[i] && I.chk}
-                </button>
-              </div>
-            ))}
+            {DAYS.map((d, i) => {
+              const isToday = i === todayIdx;
+              const isDone = h.days[i] === true;
+
+              return (
+                <div
+                  key={d}
+                  style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}
+                >
+                  <span style={{
+                    fontSize: 9,
+                    color: isToday ? "var(--ac2)" : "var(--t3)",
+                    fontWeight: isToday ? 700 : 400,
+                  }}>
+                    {d}
+                  </span>
+                  <button
+                    disabled={!isToday}
+                    onClick={() => toggleDay(h.id, i)}
+                    style={{
+                      width: 25, height: 25, borderRadius: 7,
+                      background: isDone
+                        ? isToday ? "var(--ok)" : "rgba(var(--ok-rgb), 0.3)"
+                        : "transparent",
+                      border: `1.5px solid ${
+                        isDone
+                          ? isToday ? "var(--ok)" : "rgba(var(--ok-rgb), 0.3)"
+                          : isToday ? "var(--ac)" : "var(--b1)"
+                      }`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: isToday ? "pointer" : "not-allowed",
+                      opacity: isToday ? 1 : 0.35,
+                      outline: isToday ? "2px solid rgba(124,92,252,.2)" : "none",
+                      outlineOffset: 2,
+                      transition: "var(--transition)",
+                      color: "#fff",
+                    }}
+                  >
+                    {isDone && I.chk}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}
@@ -2086,39 +2336,28 @@ Be concise, actionable, specific to their data. Max 180 words unless detailed an
 // ─── ROOT APP ───────────────────────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function App() {
-  const [view, setView] = useState("matrix");
+  const [view, setView] = useState("dash");
   const [sidebar, setSidebar] = useState(false);
 
-  // ── State with localStorage persistence ──
   const [tasks, setTasksRaw] = useState(() => LS.get("echo_tasks", INIT_TASKS));
   const [habits, setHabitsRaw] = useState(() => LS.get("echo_habits", INIT_HABITS));
   const [focusSess, setFocusRaw] = useState(() => LS.get("echo_focus", []));
   const [plan, setPlanRaw] = useState(() => LS.get("echo_plan", []));
   const [reflections, setReflRaw] = useState(() => LS.get("echo_refl", {}));
 
-  // ── Wrapped setters that also persist ──
   const setTasks = useCallback(v => {
-    setTasksRaw(prev => {
-      const next = typeof v === "function" ? v(prev) : v;
-      LS.set("echo_tasks", next); return next;
-    });
+    setTasksRaw(prev => { const next = typeof v === "function" ? v(prev) : v; LS.set("echo_tasks", next); return next; });
   }, []);
   const setHabits = useCallback(v => {
-    setHabitsRaw(prev => {
-      const next = typeof v === "function" ? v(prev) : v;
-      LS.set("echo_habits", next); return next;
-    });
+    setHabitsRaw(prev => { const next = typeof v === "function" ? v(prev) : v; LS.set("echo_habits", next); return next; });
   }, []);
   const setFocusSess = useCallback(v => {
-    setFocusRaw(prev => {
-      const next = typeof v === "function" ? v(prev) : v;
-      LS.set("echo_focus", next); return next;
-    });
+    setFocusRaw(prev => { const next = typeof v === "function" ? v(prev) : v; LS.set("echo_focus", next); return next; });
   }, []);
   const setPlan = useCallback(v => { setPlanRaw(v); LS.set("echo_plan", v); }, []);
   const setReflections = useCallback(v => { setReflRaw(v); LS.set("echo_refl", v); }, []);
 
-  // ── Responsive sidebar: open on desktop, hidden on mobile ──
+  // ── Responsive: track desktop breakpoint ──
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth >= 768 : true
   );
@@ -2127,50 +2366,110 @@ export default function App() {
     window.addEventListener("resize", handler);
     return () => window.removeEventListener("resize", handler);
   }, []);
+
+  // Close sidebar when switching to desktop
   useEffect(() => {
     if (isDesktop) setSidebar(false);
   }, [isDesktop]);
+
+  // Lock body scroll when mobile sidebar is open
+  useEffect(() => {
+    document.body.style.overflow = (!isDesktop && sidebar) ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [sidebar, isDesktop]);
+
   const pages = useMemo(() => ({
-    dash: <Dashboard tasks={tasks} habits={habits} focusSess={focusSess} setView={setView} />,
-    matrix: <EisenhowerEngine tasks={tasks} setTasks={setTasks} setView={setView} />,
-    tasks: <TaskManager tasks={tasks} setTasks={setTasks} />,
-    planner: <Planner tasks={tasks} plan={plan} setPlan={setPlan} />,
-    habits: <HabitTracker habits={habits} setHabits={setHabits} />,
-    focus: <FocusMode tasks={tasks} focusSess={focusSess} setFocusSess={setFocusSess} />,
-    analytics: <Analytics tasks={tasks} habits={habits} focusSess={focusSess} />,
-    review: <WeeklyReview tasks={tasks} habits={habits} focusSess={focusSess} reflections={reflections} setReflections={setReflections} />,
-    ai: <AIAssistant tasks={tasks} habits={habits} focusSess={focusSess} setView={setView} />,
+    dash:     <Dashboard tasks={tasks} habits={habits} focusSess={focusSess} setView={setView} />,
+    matrix:   <EisenhowerEngine tasks={tasks} setTasks={setTasks} setView={setView} />,
+    tasks:    <TaskManager tasks={tasks} setTasks={setTasks} />,
+    planner:  <Planner tasks={tasks} plan={plan} setPlan={setPlan} />,
+    habits:   <HabitTracker habits={habits} setHabits={setHabits} />,
+    focus:    <FocusMode tasks={tasks} focusSess={focusSess} setFocusSess={setFocusSess} />,
+    analytics:<Analytics tasks={tasks} habits={habits} focusSess={focusSess} />,
+    review:   <WeeklyReview tasks={tasks} habits={habits} focusSess={focusSess} reflections={reflections} setReflections={setReflections} />,
+    ai:       <AIAssistant tasks={tasks} habits={habits} focusSess={focusSess} setView={setView} />,
   }), [tasks, habits, focusSess, plan, reflections, setTasks, setHabits, setFocusSess, setPlan, setReflections, setView]);
 
   return (
     <>
       <style>{STYLES}</style>
       <style>{`
-        @media(min-width:768px){ .echo-sidebar{ transform:translateX(0) !important; } }
-        @keyframes slideIn { from{ transform:translateX(-6px); opacity:0; } to{ transform:translateX(0); opacity:1; } }
-        input[type=range]::-webkit-slider-thumb { width:14px; height:14px; }
+        /* ── Desktop: sidebar always visible ── */
+        @media (min-width: 768px) {
+          .echo-sidebar { transform: translateX(0) !important; }
+        }
+        /* ── Mobile: full-width content ── */
+        @media (max-width: 767px) {
+          .echo-sidebar { width: 240px !important; }
+        }
+        @keyframes slideIn { from { transform: translateX(-6px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        input[type=range]::-webkit-slider-thumb { width: 14px; height: 14px; }
       `}</style>
-      <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>
+
+      <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)", overflow: "hidden" }}>
+
         <Sidebar view={view} setView={setView} open={sidebar} setOpen={setSidebar} tasks={tasks} />
 
         <main style={{
-          flex: 1, marginLeft: isDesktop ? "220px" : "0",
-          padding: isDesktop ? "24px 32px" : "18px 16px",
-          minHeight: "100vh", transition: "margin-left .22s",
+          flex: 1,
+          // FIX: on desktop offset by sidebar width, on mobile full width
+          marginLeft: isDesktop ? "220px" : "0",
+          // FIX: tighter padding on mobile so content isn't cramped
+          padding: isDesktop ? "24px 32px" : "14px 12px",
+          minHeight: "100vh",
+          width: isDesktop ? "calc(100% - 220px)" : "100%",
+          // FIX: prevent any child from bleeding outside viewport
+          overflowX: "hidden",
+          boxSizing: "border-box",
+          transition: "margin-left .22s",
         }}>
-          <div style={{ maxWidth: 920, margin: "0 auto" }}>
-            {/* Topbar */}
-            <div style={{ display: "flex", alignItems: "center", marginBottom: 22 }}>
+          <div style={{
+            maxWidth: 920,
+            margin: "0 auto",
+            width: "100%",
+          }}>
+
+            {/* ── Topbar ── */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              marginBottom: isDesktop ? 22 : 16,
+              gap: 10,
+            }}>
+              {/* FIX: hamburger always rendered on mobile, positioned correctly */}
               {!isDesktop && (
-                <button className="btn btn-ghost" style={{ padding: "7px", marginRight: 10 }}
-                  onClick={() => setSidebar(true)}>{I.menu}</button>
+                <button
+                  className="btn btn-ghost"
+                  style={{
+                    padding: "8px",
+                    flexShrink: 0,
+                    border: "1px solid var(--b2)",
+                    borderRadius: 10,
+                    background: "var(--s2)",
+                  }}
+                  onClick={() => setSidebar(true)}
+                >
+                  {I.menu}
+                </button>
               )}
+
               <div style={{ flex: 1 }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 7, background: "var(--s1)", border: "1px solid var(--b1)", borderRadius: 20, padding: "5px 13px" }}>
+
+              {/* Echo AI status badge */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 7,
+                background: "var(--s1)", border: "1px solid var(--b1)",
+                borderRadius: 20, padding: "5px 13px",
+                flexShrink: 0,
+              }}>
                 <span className="status-dot pulse" style={{ background: "var(--ok)" }} />
-                <span style={{ fontSize: 11, color: "var(--t2)", fontFamily: "'Figtree'" }}>Echo AI · Active</span>
+                <span style={{ fontSize: 11, color: "var(--t2)", fontFamily: "'Figtree'" }}>
+                  Echo AI · Active
+                </span>
               </div>
             </div>
+
+            {/* ── Page content ── */}
             {pages[view] || pages.dash}
           </div>
         </main>
