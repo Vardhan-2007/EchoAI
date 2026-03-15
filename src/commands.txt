@@ -8,7 +8,7 @@ tmux attach -t session_number
 to detach from tmux session: press ctrl+b then d
 ps -f -p process_id to know the parent process process_id
 https://tex-yacht-pacific-conferencing.trycloudflare.com
-pm2 start "server -s dist -l 3000" --name echo-ai
+pm2 start "serve -s dist -l 3000" --name echo-ai
 pm2 start
 pm2 restart echo-ai
 pm2 save 
@@ -17,7 +17,7 @@ cloudflared tunnel login
 cloudflared tunnel create phone-server
 pm2 start "cloudflared tunnel run phone-server" --name public-url
 
-
+ls ~/.cloudflared 48e08cfc-66c4-4658-ae62-3791521cf523.json
 nano ~/.cloudflared/config.yml
 cloudflared tunnel route dns phone-server ai.arhavr.xyz
 
@@ -27,6 +27,18 @@ credentials-file: /data/data/com.termux/files/home/.cloudflared/abc123.json
 ingress:
   - hostname: echo-ai.arhavr.xyz
     service: http://localhost:3000
+  - hostname: ssh.arhavr.xyz
+    service: ssh://localhost:8022
   - service: http_status:404
 
 pm2 start "cloudflared tunnel run phone-server" --name public-url1
+
+ON MAC:
+nano ~/.ssh/config
+
+Host phone
+  HostName ssh.arhavr.xyz
+  User u0_a430
+  ProxyCommand cloudflared access ssh --hostname %h
+
+ssh phone command to access phone(server) remotely
