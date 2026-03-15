@@ -1,0 +1,23 @@
+Score = Task Points + Focus Points + Habit Points
+
+1. Task Points — max 40 pts
+(completed tasks / total tasks) × 40
+Example: 3 done out of 6 tasks → (3/6) × 40 = 20 pts
+
+2. Focus Points — max 40 pts
+(total focus hours × 8)  capped at 40
+Example: 3 hours focused → 3 × 8 = 24 pts · 5+ hours → full 40 pts
+
+3. Habit Points — max 20 pts
+(habits completed today / total habits) × 20
+Example: 3 out of 5 habits done today → (3/5) × 20 = 12 pts
+
+Productivity %
+
+Productivity % = (completed tasks / total tasks) × 100
+
+The color also changes based on the value:
+
+🟢 > 70% → green
+🟡 > 40% → yellow/amber
+🟣 ≤ 40% → purple (accent)

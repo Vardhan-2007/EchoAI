@@ -710,7 +710,7 @@ function Dashboard({tasks, habits, focusSess, setView}) {
         <StatCard label="Tasks Done"   value={`${done}/${total}`} color="var(--ok)"   icon={I.task}/>
         <StatCard label="Focus Hours"  value={focusHrs} suffix="h" color="var(--ac2)"  icon={I.focus}/>
         <StatCard label="Top Streak"   value={topStreak} suffix="d" color="var(--warn)" icon={I.fire}/>
-        <StatCard label="Productivity" value={pct} suffix="%" color="var(--info)" icon={I.chart}/>
+        <StatCard label="Productivity" value={pct} suffix="%" color={pct>70?"var(--ok)":pct>40?"var(--warn)":"var(--ac)"} icon={I.chart}/>
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
         <div className="card" style={{padding:20}}>
