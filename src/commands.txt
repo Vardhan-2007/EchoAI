@@ -13,13 +13,14 @@ pm2 start
 pm2 restart echo-ai
 pm2 save 
 pm2 list
+
 cloudflared tunnel login
 cloudflared tunnel create phone-server
-pm2 start "cloudflared tunnel run phone-server" --name public-url
-
-ls ~/.cloudflared 48e08cfc-66c4-4658-ae62-3791521cf523.json
-nano ~/.cloudflared/config.yml
 cloudflared tunnel route dns phone-server ai.arhavr.xyz
+ls ~/.cloudflared u can see (48e08cfc-66c4-4658-ae62-3791521cf523.json)
+
+nano ~/.cloudflared/config.yml
+in config.yml
 
 tunnel: phone-server
 credentials-file: /data/data/com.termux/files/home/.cloudflared/abc123.json
