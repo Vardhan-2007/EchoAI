@@ -184,11 +184,11 @@ const INIT_TASKS = [
   { id:uid(), title:"Scroll social media",     desc:"Random browsing",            priority:"low",      cat:"Personal", due:today(), status:"todo",        notes:"", quad:"Q4", urgency:1, importance:1, aiRationale:"" },
 ];
 const INIT_HABITS = [
-  { id:uid(), name:"Exercise",    emoji:"🏋️", streak:7,  days:[true,false,true,true,false,true,false] },
-  { id:uid(), name:"Read 30min",  emoji:"📚", streak:12, days:[true,true,true,false,true,true,false] },
-  { id:uid(), name:"Meditate",    emoji:"🧘", streak:4,  days:[false,true,false,true,false,true,false] },
-  { id:uid(), name:"Deep Work",   emoji:"🎯", streak:9,  days:[true,true,false,true,true,false,false] },
-  { id:uid(), name:"Drink Water", emoji:"💧", streak:21, days:[true,true,true,true,true,false,false] },
+  { id:uid(), name:"Exercise",    emoji:"🏋️", streak:0, days:Array(7).fill(false) },
+  { id:uid(), name:"Read 30min",  emoji:"📚", streak:0, days:Array(7).fill(false) },
+  { id:uid(), name:"Meditate",    emoji:"🧘", streak:0, days:Array(7).fill(false) },
+  { id:uid(), name:"Deep Work",   emoji:"🎯", streak:0, days:Array(7).fill(false) },
+  { id:uid(), name:"Drink Water", emoji:"💧", streak:0, days:Array(7).fill(false) },
 ];
 
 const I = {
