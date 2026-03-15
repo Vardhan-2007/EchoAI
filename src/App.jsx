@@ -1089,91 +1089,298 @@ function HabitTracker({habits:propHabits, setHabits:setPropHabits}) {
 
 // ─── FOCUS MODE ───────────────────────────────────────────────────────────────
 function FocusMode({tasks, focusSess, setFocusSess}) {
-  const MODES=[{label:"Focus",mins:25,color:"var(--ac2)"},{label:"Short Break",mins:5,color:"var(--ok)"},{label:"Long Break",mins:15,color:"var(--info)"}];
-  const [modeIdx,setModeIdx]=useState(0);
-  const [secsMap,setSecsMap]=useState({0:25*60,1:5*60,2:15*60});
-  const [totalMap,setTotalMap]=useState({0:25*60,1:5*60,2:15*60});
-  const [running,setRunning]=useState(false);
-  const [sessions,setSessions]=useState(0);
-  const [selTask,setSelTask]=useState("");
-  const [editing,setEditing]=useState(false);
-  const [editInput,setEditInput]=useState("");
-  const timerRef=useRef(null);
-  const inputRef=useRef(null);
-  const secs=secsMap[modeIdx];
-  const setSecs=val=>setSecsMap(prev=>({...prev,[modeIdx]:typeof val==="function"?val(prev[modeIdx]):val}));
-  const pct=((totalMap[modeIdx]-secs)/totalMap[modeIdx])*100;
-  const R=104, C=2*Math.PI*R;
-  useEffect(()=>{
-    const q1=tasks.find(t=>t?.quad==="Q1"&&t?.status!=="done");
-    const q2=tasks.find(t=>t?.quad==="Q2"&&t?.status!=="done");
-    const fb=tasks.find(t=>t?.status!=="done");
-    const best=q1||q2||fb; if(best)setSelTask(best.id);
-  },[]); // eslint-disable-line
-  useEffect(()=>{
-    if(running){timerRef.current=setInterval(()=>{setSecs(s=>{
-      if(s<=1){clearInterval(timerRef.current);setRunning(false);
-        if(modeIdx===0){setSessions(c=>c+1);const task=tasks.find(t=>t.id===selTask);setFocusSess(f=>[...f,{id:uid(),date:today(),mins:Math.floor(totalMap[modeIdx]/60),task:task?.title||"Focus Session"}]);}
-        return 0;}return s-1;});},1000);}
-    return()=>clearInterval(timerRef.current);
-  },[running,modeIdx]); // eslint-disable-line
-  useEffect(()=>{if(editing&&inputRef.current){inputRef.current.focus();inputRef.current.select();}},[editing]);
-  const switchMode=i=>{setRunning(false);clearInterval(timerRef.current);setModeIdx(i);setEditing(false);};
-  const reset=()=>{setSecsMap(prev=>({...prev,[modeIdx]:totalMap[modeIdx]}));setRunning(false);clearInterval(timerRef.current);};
-  const openEdit=()=>{if(running)return;const m=String(Math.floor(secs/60)).padStart(2,"0"),s2=String(secs%60).padStart(2,"0");setEditInput(`${m}:${s2}`);setEditing(true);};
-  const handleEditChange=e=>{let raw=e.target.value.replace(/\D/g,"").slice(0,4);if(raw.length>=3)raw=raw.slice(0,2)+":"+raw.slice(2);setEditInput(raw);};
-  const commitEdit=()=>{const parts=editInput.split(":");const mins=Math.min(parseInt(parts[0]||"0",10),99),secs2=Math.min(parseInt(parts[1]||"0",10),59),total=mins*60+secs2;if(total>0){setSecsMap(prev=>({...prev,[modeIdx]:total}));setTotalMap(prev=>({...prev,[modeIdx]:total}));}setEditing(false);};
-  const handleEditKey=e=>{if(e.key==="Enter")commitEdit();if(e.key==="Escape")setEditing(false);};
-  const selTaskObj=tasks.find(t=>t.id===selTask);
-  const selQ=selTaskObj?.quad?QUADS[selTaskObj.quad]:null;
-  const todayMins=useMemo(()=>focusSess.filter(s=>s.date===today()).reduce((a,b)=>a+(b?.mins||0),0),[focusSess]);
-  const totalMins=useMemo(()=>focusSess.reduce((a,b)=>a+(b?.mins||0),0),[focusSess]);
+  const MODES=[
+    {label:"Focus",      mins:25, color:"var(--ac2)"},
+    {label:"Short Break",mins:5,  color:"var(--ok)"},
+    {label:"Long Break", mins:15, color:"var(--info)"},
+  ];
+
+  const [modeIdx,   setModeIdx]   = useState(0);
+  const [secsMap,   setSecsMap]   = useState({0:25*60, 1:5*60, 2:15*60});
+  const [totalMap,  setTotalMap]  = useState({0:25*60, 1:5*60, 2:15*60});
+  const [running,   setRunning]   = useState(false);
+  // sessions derived from focusSess — persists across navigation, resets daily
+  const [selTask,   setSelTask]   = useState("");
+  const [editing,   setEditing]   = useState(false);
+  const [editInput, setEditInput] = useState("");
+  const [alarming,  setAlarming]  = useState(false);   // true while alarm is ringing
+
+  const timerRef    = useRef(null);
+  const inputRef    = useRef(null);
+  const firedRef    = useRef(false);   // ← prevents double-count in StrictMode
+  const audioCtxRef = useRef(null);
+  const alarmRef    = useRef(null);    // holds the repeating alarm interval
+
+  const secs    = secsMap[modeIdx];
+  const setSecs = val => setSecsMap(prev => ({
+    ...prev,
+    [modeIdx]: typeof val === "function" ? val(prev[modeIdx]) : val,
+  }));
+  const pct = ((totalMap[modeIdx] - secs) / totalMap[modeIdx]) * 100;
+  const R = 104, C = 2 * Math.PI * R;
+
+  // ── Auto-select highest-priority task ────────────────────────────────────
+  useEffect(() => {
+    const q1 = tasks.find(t => t?.quad === "Q1" && t?.status !== "done");
+    const q2 = tasks.find(t => t?.quad === "Q2" && t?.status !== "done");
+    const fb = tasks.find(t => t?.status !== "done");
+    const best = q1 || q2 || fb;
+    if (best) setSelTask(best.id);
+  }, []); // eslint-disable-line
+
+  // ── Web Audio: play one beep pattern ─────────────────────────────────────
+  const playBeepPattern = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") ctx.resume();
+
+      const beep = (freq, startTime, duration) => {
+        const osc  = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.45, startTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+
+      const t = ctx.currentTime;
+      beep(880,  t,        0.18);
+      beep(1100, t + 0.22, 0.18);
+      beep(1320, t + 0.44, 0.30);
+    } catch(e) {}
+  }, []);
+
+  // Start looping alarm
+  const startAlarm = useCallback(() => {
+    setAlarming(true);
+    playBeepPattern();
+    alarmRef.current = setInterval(playBeepPattern, 1400);
+  }, [playBeepPattern]);
+
+  // Stop looping alarm
+  const stopAlarm = useCallback(() => {
+    if (alarmRef.current) {
+      clearInterval(alarmRef.current);
+      alarmRef.current = null;
+    }
+    setAlarming(false);
+  }, []);
+
+  // Cleanup alarm on unmount
+  useEffect(() => () => {
+    if (alarmRef.current) clearInterval(alarmRef.current);
+  }, []);
+
+  // ── Timer tick ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (running) {
+      firedRef.current = false; // reset guard each time timer starts
+      timerRef.current = setInterval(() => {
+        setSecs(s => {
+          if (s <= 1) {
+            clearInterval(timerRef.current);
+            setRunning(false);
+
+            // firedRef prevents React StrictMode double-invocation
+            if (!firedRef.current) {
+              firedRef.current = true;
+              startAlarm();
+              if (modeIdx === 0) {
+                const task = tasks.find(t => t.id === selTask);
+                setFocusSess(f => [...f, {
+                  id:   uid(),
+                  date: today(),
+                  mins: Math.floor(totalMap[modeIdx] / 60),
+                  task: task?.title || "Focus Session",
+                }]);
+              }
+            }
+            return 0;
+          }
+          return s - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [running, modeIdx]); // eslint-disable-line
+
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const switchMode = i => {
+    setRunning(false);
+    clearInterval(timerRef.current);
+    stopAlarm();
+    setModeIdx(i);
+    setEditing(false);
+    firedRef.current = false;
+  };
+
+  const reset = () => {
+    setSecsMap(prev => ({...prev, [modeIdx]: totalMap[modeIdx]}));
+    setRunning(false);
+    clearInterval(timerRef.current);
+    stopAlarm();
+    firedRef.current = false;
+  };
+
+  const openEdit = () => {
+    if (running) return;
+    const m  = String(Math.floor(secs / 60)).padStart(2, "0");
+    const s2 = String(secs % 60).padStart(2, "0");
+    setEditInput(`${m}:${s2}`);
+    setEditing(true);
+  };
+
+  const handleEditChange = e => {
+    let raw = e.target.value.replace(/\D/g, "").slice(0, 4);
+    if (raw.length >= 3) raw = raw.slice(0, 2) + ":" + raw.slice(2);
+    setEditInput(raw);
+  };
+
+  const commitEdit = () => {
+    const parts = editInput.split(":");
+    const mins  = Math.min(parseInt(parts[0] || "0", 10), 99);
+    const secs2 = Math.min(parseInt(parts[1] || "0", 10), 59);
+    const total = mins * 60 + secs2;
+    if (total > 0) {
+      setSecsMap(prev  => ({...prev,  [modeIdx]: total}));
+      setTotalMap(prev => ({...prev,  [modeIdx]: total}));
+    }
+    setEditing(false);
+  };
+
+  const handleEditKey = e => {
+    if (e.key === "Enter")  commitEdit();
+    if (e.key === "Escape") setEditing(false);
+  };
+
+  const selTaskObj = tasks.find(t => t.id === selTask);
+  const selQ       = selTaskObj?.quad ? QUADS[selTaskObj.quad] : null;
+  // Count today's completed focus sessions from persisted focusSess
+  const sessions   = useMemo(() => focusSess.filter(s => s.date === today()).length, [focusSess]);
+  const todayMins  = useMemo(() => focusSess.filter(s => s.date === today()).reduce((a,b) => a+(b?.mins||0), 0), [focusSess]);
+  const totalMins  = useMemo(() => focusSess.reduce((a,b) => a+(b?.mins||0), 0), [focusSess]);
+
   return (
     <div className="anim" style={{display:"flex",flexDirection:"column",gap:22,alignItems:"center",maxWidth:460,margin:"0 auto"}}>
-      <div style={{alignSelf:"flex-start",width:"100%"}}><SectionHeader title="Focus Mode" subtitle="Pomodoro timer with Eisenhower task priority"/></div>
-      <div style={{display:"flex",gap:7}}>
-        {MODES.map((m,i)=><button key={m.label} className={`btn ${modeIdx===i?"btn-p":"btn-ghost"}`} style={{padding:"7px 14px",fontSize:12}} onClick={()=>switchMode(i)}>{m.label}</button>)}
+      <div style={{alignSelf:"flex-start",width:"100%"}}>
+        <SectionHeader title="Focus Mode" subtitle="Pomodoro timer with Eisenhower task priority"/>
       </div>
+
+      <div style={{display:"flex",gap:7}}>
+        {MODES.map((m,i) => (
+          <button key={m.label}
+            className={`btn ${modeIdx===i?"btn-p":"btn-ghost"}`}
+            style={{padding:"7px 14px",fontSize:12}}
+            onClick={() => switchMode(i)}>
+            {m.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Timer ring */}
       <div style={{position:"relative",width:240,height:240,display:"flex",alignItems:"center",justifyContent:"center"}}>
         <svg width="240" height="240" style={{position:"absolute",transform:"rotate(-90deg)"}}>
           <circle cx="120" cy="120" r={R} fill="none" stroke="var(--s4)" strokeWidth="9"/>
           <circle cx="120" cy="120" r={R} fill="none" stroke={MODES[modeIdx].color} strokeWidth="9"
             strokeDasharray={C} strokeDashoffset={C*(1-pct/100)} strokeLinecap="round"
-            style={{transition:"stroke-dashoffset 1s linear",filter:`drop-shadow(0 0 8px ${MODES[modeIdx].color})`}}/>
+            style={{transition:"stroke-dashoffset 1s linear", filter:`drop-shadow(0 0 8px ${MODES[modeIdx].color})`}}/>
         </svg>
         <div style={{textAlign:"center",zIndex:1}}>
-          {editing?(
+          {editing ? (
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
-              <input ref={inputRef} value={editInput} onChange={handleEditChange} onKeyDown={handleEditKey} onBlur={commitEdit}
-                style={{fontSize:42,fontWeight:700,color:MODES[modeIdx].color,letterSpacing:-1,background:"transparent",border:"none",borderBottom:`2px solid ${MODES[modeIdx].color}`,width:140,textAlign:"center",outline:"none",fontFamily:"'JetBrains Mono',monospace"}} placeholder="mm:ss"/>
+              <input ref={inputRef} value={editInput}
+                onChange={handleEditChange} onKeyDown={handleEditKey} onBlur={commitEdit}
+                style={{fontSize:42,fontWeight:700,color:MODES[modeIdx].color,letterSpacing:-1,
+                  background:"transparent",border:"none",
+                  borderBottom:`2px solid ${MODES[modeIdx].color}`,
+                  width:140,textAlign:"center",outline:"none",
+                  fontFamily:"'JetBrains Mono',monospace"}}
+                placeholder="mm:ss"/>
               <div style={{fontSize:10,color:"var(--t3)"}}>Enter to confirm · Esc to cancel</div>
             </div>
-          ):(
-            <div onClick={openEdit} style={{cursor:running?"default":"pointer",borderRadius:10,padding:"4px 8px",transition:"background .15s"}}
-              onMouseEnter={e=>{if(!running)e.currentTarget.style.background="var(--s3)";}}
+          ) : (
+            <div onClick={openEdit}
+              style={{cursor:running?"default":"pointer",borderRadius:10,padding:"4px 8px",transition:"background .15s"}}
+              onMouseEnter={e=>{if(!running) e.currentTarget.style.background="var(--s3)";}}
               onMouseLeave={e=>{e.currentTarget.style.background="transparent";}}>
-              <div style={{fontSize:42,fontWeight:700,color:MODES[modeIdx].color,letterSpacing:-1,fontFamily:"'JetBrains Mono',monospace"}}>{fmtTime(secs)}</div>
-              {!running&&<div style={{fontSize:10,color:"var(--t3)",marginTop:2}}>✏️ tap to edit</div>}
+              <div style={{fontSize:42,fontWeight:700,color:MODES[modeIdx].color,letterSpacing:-1,fontFamily:"'JetBrains Mono',monospace"}}>
+                {fmtTime(secs)}
+              </div>
+              {!running && <div style={{fontSize:10,color:"var(--t3)",marginTop:2}}>✏️ tap to edit</div>}
             </div>
           )}
           <div style={{fontSize:12,color:"var(--t2)",marginTop:4}}>{MODES[modeIdx].label}</div>
-          {sessions>0&&<div style={{fontSize:11,color:"var(--warn)",marginTop:4}}>🍅 {sessions} session{sessions!==1?"s":""}</div>}
+          {sessions > 0 && (
+            <div style={{fontSize:11,color:"var(--warn)",marginTop:4}}>
+              🍅 {sessions} session{sessions!==1?"s":""}
+            </div>
+          )}
         </div>
       </div>
-      <div style={{display:"flex",gap:10}}>
-        <button className="btn btn-p" style={{width:105,justifyContent:"center",fontSize:15}} onClick={()=>setRunning(r=>!r)}>{running?I.pause:I.play}</button>
-        <button className="btn btn-s" style={{padding:"10px 12px"}} onClick={reset}>{I.reset}</button>
+
+      {/* Controls */}
+      <div style={{display:"flex",gap:10,alignItems:"center"}}>
+        <button className="btn btn-p"
+          style={{width:105,justifyContent:"center",fontSize:15}}
+          onClick={() => { stopAlarm(); setRunning(r => !r); }}>
+          {running ? I.pause : I.play}
+        </button>
+        <button className="btn btn-s" style={{padding:"10px 12px"}} onClick={reset}>
+          {I.reset}
+        </button>
+        {/* Stop alarm button — only visible while alarm is ringing */}
+        {alarming && (
+          <button className="btn btn-danger"
+            style={{padding:"10px 16px",fontSize:13,animation:"pulse 1s infinite"}}
+            onClick={stopAlarm}>
+            🔔 Stop Alarm
+          </button>
+        )}
       </div>
+
       <div style={{width:"100%"}}>
-        <label style={{fontSize:12,color:"var(--t2)",marginBottom:7,display:"flex",alignItems:"center",gap:7,fontWeight:500}}>Working on: {selQ&&<QuadBadge quad={selTaskObj?.quad}/>}</label>
-        <select className="inp" value={selTask} onChange={e=>setSelTask(e.target.value)}>
+        <label style={{fontSize:12,color:"var(--t2)",marginBottom:7,display:"flex",alignItems:"center",gap:7,fontWeight:500}}>
+          Working on: {selQ && <QuadBadge quad={selTaskObj?.quad}/>}
+        </label>
+        <select className="inp" value={selTask} onChange={e => setSelTask(e.target.value)}>
           <option value="">— Select task —</option>
-          {["Q1","Q2","Q3","Q4"].map(q=>{const qt=tasks.filter(t=>t.quad===q&&t.status!=="done");if(!qt.length)return null;return <optgroup key={q} label={`${QUADS[q].icon} ${q} — ${QUADS[q].label}`}>{qt.map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</optgroup>;})}
-          <optgroup label="Unclassified">{tasks.filter(t=>!t.quad&&t.status!=="done").map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</optgroup>
+          {["Q1","Q2","Q3","Q4"].map(q => {
+            const qt = tasks.filter(t => t.quad===q && t.status!=="done");
+            if (!qt.length) return null;
+            return (
+              <optgroup key={q} label={`${QUADS[q].icon} ${q} — ${QUADS[q].label}`}>
+                {qt.map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+              </optgroup>
+            );
+          })}
+          <optgroup label="Unclassified">
+            {tasks.filter(t => !t.quad && t.status!=="done").map(t => (
+              <option key={t.id} value={t.id}>{t.title}</option>
+            ))}
+          </optgroup>
         </select>
       </div>
+
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,width:"100%"}}>
-        {[{l:"Today",v:`${Math.floor(todayMins/60)}h ${todayMins%60}m`,c:"var(--ac2)"},{l:"Sessions",v:`${sessions}`,c:"var(--ok)"},{l:"Total",v:`${Math.floor(totalMins/60)}h`,c:"var(--warn)"}].map(s=>(
+        {[
+          {l:"Today",    v:`${Math.floor(todayMins/60)}h ${todayMins%60}m`, c:"var(--ac2)"},
+          {l:"Sessions", v:`${sessions}`,                                    c:"var(--ok)"},
+          {l:"Total",    v:`${Math.floor(totalMins/60)}h`,                   c:"var(--warn)"},
+        ].map(s => (
           <div key={s.l} className="card-sm" style={{padding:"13px 14px",textAlign:"center"}}>
             <div className="f-display" style={{fontSize:20,fontWeight:700,color:s.c}}>{s.v}</div>
             <div style={{fontSize:10,color:"var(--t3)",marginTop:3}}>{s.l}</div>
@@ -1183,6 +1390,7 @@ function FocusMode({tasks, focusSess, setFocusSess}) {
     </div>
   );
 }
+
 
 // ─── ANALYTICS ────────────────────────────────────────────────────────────────
 function Analytics({tasks, habits, focusSess}) {
