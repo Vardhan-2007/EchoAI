@@ -256,7 +256,6 @@ async function callAI(messages, system="", retries=2) {
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
 });
-      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const content = data?.choices?.[0]?.message?.content;
