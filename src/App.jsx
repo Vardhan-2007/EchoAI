@@ -253,7 +253,7 @@ async function callAI(messages, system="", retries=2) {
     try {
       const res = await fetch("https://openrouter.ai/api/v1/chat/completions",{
         method:"POST",
-        headers:{"Authorization":"Bearer ${import.meta.env.VITE_OPENROUTER_KEY}","Content-Type":"application/json"},
+        headers:{"Authorization":"Bearer ${import.meta.env.VITE_OPENROUTER}","Content-Type":"application/json"},
         body:JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
