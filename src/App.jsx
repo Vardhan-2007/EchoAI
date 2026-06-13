@@ -1,3 +1,6 @@
+import { useFirestoreData } from "./useFirestore";
+import { AuthProvider, useAuth } from "./AuthContext";
+import LoginPage from "./LoginPage";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -1936,24 +1939,136 @@ function AIAssistant({tasks, habits, focusSess, setView}) {
 }
 
 // ─── ROOT APP ─────────────────────────────────────────────────────────────────
-export default function App() {
-  const [view,setView]=useState("dash");
-  const [sidebar,setSidebar]=useState(false);
-  const [tasks,setTasksRaw]=useState(()=>LS.get("echo_tasks",INIT_TASKS));
-  const [habits,setHabitsRaw]=useState(()=>LS.get("echo_habits",INIT_HABITS));
-  const [focusSess,setFocusRaw]=useState(()=>LS.get("echo_focus",[]));
-  const [plan,setPlanRaw]=useState(()=>LS.get("echo_plan",[]));
-  const [reflections,setReflRaw]=useState(()=>LS.get("echo_refl",{}));
-  const setTasks=useCallback(v=>{setTasksRaw(prev=>{const next=typeof v==="function"?v(prev):v;LS.set("echo_tasks",next);return next;});},[]);
-  const setHabits=useCallback(v=>{setHabitsRaw(prev=>{const next=typeof v==="function"?v(prev):v;LS.set("echo_habits",next);return next;});},[]);
-  const setFocusSess=useCallback(v=>{setFocusRaw(prev=>{const next=typeof v==="function"?v(prev):v;LS.set("echo_focus",next);return next;});},[]);
-  const setPlan=useCallback(v=>{setPlanRaw(v);LS.set("echo_plan",v);},[]);
-  const setReflections=useCallback(v=>{setReflRaw(v);LS.set("echo_refl",v);},[]);
-  const [isDesktop,setIsDesktop]=useState(()=>typeof window!=="undefined"?window.innerWidth>=768:true);
-  useEffect(()=>{const h=()=>setIsDesktop(window.innerWidth>=768);window.addEventListener("resize",h);return()=>window.removeEventListener("resize",h);},[]);
-  useEffect(()=>{if(isDesktop)setSidebar(false);},[isDesktop]);
-  useEffect(()=>{document.body.style.overflow=(!isDesktop&&sidebar)?"hidden":"";return()=>{document.body.style.overflow="";};},[sidebar,isDesktop]);
-  const pageProps = useMemo(()=>({tasks,habits,focusSess,plan,reflections,setTasks,setHabits,setFocusSess,setPlan,setReflections,setView}),[tasks,habits,focusSess,plan,reflections,setTasks,setHabits,setFocusSess,setPlan,setReflections,setView]);
+// WRAPPER — exported as default, wraps everything with AuthProvider
+export default function AppWrapper() {
+  return (
+    <AuthProvider>
+      <App />
+    </AuthProvider>
+  );
+}
+
+// MAIN APP — now has access to auth state
+function App() {
+  const { user, loading, logout } = useAuth();
+  const { data: firestoreData, loading: fsLoading, saveData } = useFirestoreData(user?.uid);
+  
+  // ALL state hooks first
+  const [view, setView] = useState("dash");
+  const [sidebar, setSidebar] = useState(false);
+  const [tasks, setTasksRaw] = useState(INIT_TASKS);
+  const [habits, setHabitsRaw] = useState(INIT_HABITS);
+  const [focusSess, setFocusRaw] = useState([]);
+  const [plan, setPlanRaw] = useState([]);
+  const [reflections, setReflRaw] = useState({});
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== "undefined" ? window.innerWidth >= 768 : true);
+
+  // ALL useEffect hooks next
+  useEffect(() => {
+    if (firestoreData) {
+      setTasksRaw(firestoreData.tasks || INIT_TASKS);
+      setHabitsRaw(firestoreData.habits || INIT_HABITS);
+      setFocusRaw(firestoreData.focusSess || []);
+      setPlanRaw(firestoreData.plan || []);
+      setReflRaw(firestoreData.reflections || {});
+    }
+  }, [firestoreData]);
+
+  useEffect(() => {
+    if (!user?.uid) return;
+    const timeout = setTimeout(() => {
+      saveData({
+        tasks,
+        habits,
+        focusSess,
+        plan,
+        reflections,
+        lastUpdated: new Date().toISOString()
+      });
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, [tasks, habits, focusSess, plan, reflections, user?.uid, saveData]);
+
+  useEffect(() => {
+    const h = () => setIsDesktop(window.innerWidth >= 768);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
+
+  useEffect(() => {
+    if (isDesktop) setSidebar(false);
+  }, [isDesktop]);
+
+  useEffect(() => {
+    document.body.style.overflow = (!isDesktop && sidebar) ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [sidebar, isDesktop]);
+
+  // ALL useCallback hooks
+  const setTasks = useCallback(v => {
+    setTasksRaw(prev => {
+      const next = typeof v === "function" ? v(prev) : v;
+      LS.set("echo_tasks", next);
+      return next;
+    });
+  }, []);
+
+  const setHabits = useCallback(v => {
+    setHabitsRaw(prev => {
+      const next = typeof v === "function" ? v(prev) : v;
+      LS.set("echo_habits", next);
+      return next;
+    });
+  }, []);
+
+  const setFocusSess = useCallback(v => {
+    setFocusRaw(prev => {
+      const next = typeof v === "function" ? v(prev) : v;
+      LS.set("echo_focus", next);
+      return next;
+    });
+  }, []);
+
+  const setPlan = useCallback(v => {
+    setPlanRaw(v);
+    LS.set("echo_plan", v);
+  }, []);
+
+  const setReflections = useCallback(v => {
+    setReflRaw(v);
+    LS.set("echo_refl", v);
+  }, []);
+
+  // ALL useMemo hooks
+  const pageProps = useMemo(() => ({
+    tasks, habits, focusSess, plan, reflections,
+    setTasks, setHabits, setFocusSess, setPlan, setReflections, setView
+  }), [tasks, habits, focusSess, plan, reflections, setTasks, setHabits, setFocusSess, setPlan, setReflections, setView]);
+
+  // NOW conditional returns are safe
+  if (loading || fsLoading) {
+    return (
+      <div style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--bg)", color: "var(--t2)"
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: "50%",
+            border: "3px solid var(--acg)", borderTopColor: "var(--ac)",
+            margin: "0 auto 16px", animation: "spin 1s linear infinite"
+          }} />
+          <div>Loading your data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
+  // Render function (not a hook, safe here)
   const renderPage = () => {
     const p = pageProps;
     switch(view) {
@@ -1968,10 +2083,12 @@ export default function App() {
       default:         return <Dashboard tasks={p.tasks} habits={p.habits} focusSess={p.focusSess} setView={p.setView}/>;
     }
   };
+
   return (
     <>
       <style>{STYLES}</style>
       <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
         @media(min-width:768px){ .echo-sidebar{ transform:translateX(0) !important; } }
         @media(max-width:767px){ .echo-sidebar{ width:240px !important; } }
         @keyframes slideIn{from{transform:translateX(-6px);opacity:0}to{transform:translateX(0);opacity:1}}
@@ -1983,8 +2100,19 @@ export default function App() {
         <main style={{flex:1,marginLeft:isDesktop?"220px":"0",padding:isDesktop?"24px 32px":"14px 12px",minHeight:"100vh",width:isDesktop?"calc(100% - 220px)":"100%",overflowX:"hidden",boxSizing:"border-box",transition:"margin-left .22s"}}>
           <div style={{maxWidth:920,margin:"0 auto",width:"100%"}}>
             <div style={{display:"flex",alignItems:"center",marginBottom:isDesktop?22:16,gap:10}}>
-              {!isDesktop&&<button className="btn btn-ghost" style={{padding:"8px",flexShrink:0,border:"1px solid var(--b2)",borderRadius:10,background:"var(--s2)"}} onClick={()=>setSidebar(true)}>{I.menu}</button>}
+              {!isDesktop && <button className="btn btn-ghost" style={{padding:"8px",flexShrink:0,border:"1px solid var(--b2)",borderRadius:10,background:"var(--s2)"}} onClick={()=>setSidebar(true)}>{I.menu}</button>}
               <div style={{flex:1}}/>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                {user.photoURL && (
+                  <img src={user.photoURL} alt="" style={{width:28,height:28,borderRadius:"50%",border:"2px solid var(--ac)",objectFit:"cover"}} />
+                )}
+                <span style={{fontSize:12,color:"var(--t2)",maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {user.displayName || user.email}
+                </span>
+                <button className="btn btn-ghost btn-sm" onClick={logout} style={{fontSize:11,color:"var(--err)",padding:"5px 10px"}}>
+                  Logout
+                </button>
+              </div>
               <div style={{display:"flex",alignItems:"center",gap:7,background:"var(--s1)",border:"1px solid var(--b1)",borderRadius:20,padding:"5px 13px",flexShrink:0}}>
                 <span className="status-dot pulse" style={{background:"var(--ok)"}}/>
                 <span style={{fontSize:11,color:"var(--t2)"}}>Echo AI · Active</span>
